@@ -1,0 +1,325 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  GUEST_PENDING
+  STUDENT
+  MESS_STAFF
+  QUALITY_INSPECTOR
+  MESS_SUPERVISOR
+  HOSTEL_WARDEN
+  CHIEF_WARDEN
+  MESS_COMMITTEE_REP
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum ScopeType {
+  CAMPUS
+  HOSTEL
+  MESS
+}
+
+enum MealType {
+  BREAKFAST
+  LUNCH
+  SNACKS
+  DINNER
+  SPECIAL
+}
+
+enum MealState {
+  OPEN
+  LOCKED
+  SERVED
+  CLOSED
+}
+
+enum AddInType {
+  ADD_EXTRA
+  SWAP_ITEM
+  IMPROVE_PREPARATION
+}
+
+enum AddInStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  SHORTLISTED
+  APPROVED_FOR_TRIAL
+  SCHEDULED
+  SERVED
+  EVALUATED
+  DECLINED
+  MERGED
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts        Account[]
+  sessions        Session[]
+  roleAssignments RoleAssignment[]
+  accessRequests  AccessRequest[]
+  bookings        Booking[]
+  addInSuggestions AddInSuggestion[]
+  addInVotes      AddInVote[]
+  addInOptIns     AddInOptIn[]
+  mealFeedbacks   MealFeedback[]
+  dutiesAssigned  Duty[]            @relation("AssignedStaff")
+  inspectionsRun  QualityCheck[]    @relation("Inspector")
+  presenceLogs    PresenceHeartbeat[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  ipAddress    String?
+  userAgent    String?
+  deviceLabel  String?
+  lastActive   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model RoleAssignment {
+  id         String    @id @default(cuid())
+  userId     String
+  role       Role
+  scopeType  ScopeType @default(HOSTEL)
+  scopeId    String?   // hostelId or messId
+  grantedBy  String
+  reason     String
+  grantedAt  DateTime  @default(now())
+  revokedAt  DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, role])
+}
+
+model Hostel {
+  id        String   @id
+  name      String
+  shortCode String   @unique
+  type      String   // boys, girls, pg
+  messId    String
+  capacity  Int
+  notes     String?
+
+  mess      Mess     @relation(fields: [messId], references: [id])
+}
+
+model Mess {
+  id       String   @id
+  name     String
+  capacity Int
+  hostels  Hostel[]
+  meals    MealSchedule[]
+}
+
+model MealSchedule {
+  id                 String       @id @default(cuid())
+  messId             String
+  date               DateTime     @db.Date
+  type               MealType
+  title              String
+  state              MealState    @default(OPEN)
+  startTime          String
+  endTime            String
+  cutoffTime         DateTime
+  isMessOff          Boolean      @default(false)
+  bufferPercentage   Float        @default(6.0)
+  confirmedHeadcount Int          @default(0)
+  actualCheckIns     Int          @default(0)
+
+  mess          Mess           @relation(fields: [messId], references: [id])
+  bookings      Booking[]
+  qualityChecks QualityCheck[]
+  feedbacks     MealFeedback[]
+  duties        Duty[]
+
+  @@unique([messId, date, type])
+}
+
+model Booking {
+  id             String    @id @default(cuid())
+  mealScheduleId String
+  userId         String
+  status         String    // CONFIRMED, CANCELLED, CONSUMED
+  bookedAt       DateTime  @default(now())
+  cancelledAt    DateTime?
+  consumedAt     DateTime?
+  qrTokenHash    String?   @unique
+
+  mealSchedule   MealSchedule  @relation(fields: [mealScheduleId], references: [id])
+  user           User          @relation(fields: [userId], references: [id])
+  feedback       MealFeedback?
+
+  @@unique([mealScheduleId, userId])
+}
+
+model AddInSuggestion {
+  id              String      @id @default(cuid())
+  userId          String
+  mealSlot        String      // e.g. "Friday Lunch" or mealScheduleId
+  foodItemName    String
+  type            AddInType
+  reason          String?
+  studentNote     String?
+  displayHandle   String      // e.g. "Resident of SVH"
+  status          AddInStatus @default(SUBMITTED)
+  feasibilityNote String?
+  decisionReason  String?
+  createdAt       DateTime    @default(now())
+
+  user   User         @relation(fields: [userId], references: [id])
+  votes  AddInVote[]
+  optIns AddInOptIn[]
+
+  @@index([mealSlot, status])
+}
+
+model AddInVote {
+  id           String   @id @default(cuid())
+  suggestionId String
+  userId       String
+  votedAt      DateTime @default(now())
+
+  suggestion AddInSuggestion @relation(fields: [suggestionId], references: [id], onDelete: Cascade)
+  user       User            @relation(fields: [userId], references: [id])
+
+  @@unique([suggestionId, userId])
+}
+
+model AddInOptIn {
+  id           String   @id @default(cuid())
+  suggestionId String
+  userId       String
+  optedInAt    DateTime @default(now())
+
+  suggestion AddInSuggestion @relation(fields: [suggestionId], references: [id])
+  user       User            @relation(fields: [userId], references: [id])
+
+  @@unique([suggestionId, userId])
+}
+
+model MealFeedback {
+  id             String   @id @default(cuid())
+  mealScheduleId String
+  userId         String
+  bookingId      String   @unique // Proof of consumption (Verified Diner rule)
+  ratingOverall  Int
+  ratingTaste    Int
+  ratingHygiene  Int
+  ratingQuantity Int
+  issueTags      String[]
+  comment        String?
+  isAnonymous    Boolean  @default(true)
+  safetyAlert    Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  mealSchedule MealSchedule @relation(fields: [mealScheduleId], references: [id])
+  user         User         @relation(fields: [userId], references: [id])
+  booking      Booking      @relation(fields: [bookingId], references: [id])
+}
+
+model QualityCheck {
+  id                 String   @id @default(cuid())
+  mealScheduleId     String
+  stage              String   // raw_materials, cooked_food
+  temperatureCelsius Float
+  hygieneApproved    Boolean
+  tasteApproved      Boolean
+  overallStatus      String   // PASS, FAIL
+  inspectorId        String
+  timestamp          DateTime @default(now())
+  overrideReason     String?
+
+  mealSchedule MealSchedule @relation(fields: [mealScheduleId], references: [id])
+  inspector    User         @relation("Inspector", fields: [inspectorId], references: [id])
+}
+
+model Duty {
+  id             String   @id @default(cuid())
+  mealScheduleId String
+  title          String
+  assignedToId   String
+  priority       String
+  status         String
+  dueTime        String
+
+  mealSchedule MealSchedule @relation(fields: [mealScheduleId], references: [id])
+  assignedTo   User         @relation("AssignedStaff", fields: [assignedToId], references: [id])
+}
+
+model AccessRequest {
+  id            String   @id @default(cuid())
+  userId        String
+  requestedRole Role
+  registrationNo String
+  hostelId      String
+  status        String   // PENDING, APPROVED, REJECTED
+  reviewedBy    String?
+  reviewReason  String?
+  createdAt     DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model PresenceHeartbeat {
+  id        String   @id @default(cuid())
+  userId    String
+  role      Role
+  hostelId  String?
+  timestamp DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([timestamp])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actor     String
+  role      String
+  action    String
+  entity    String
+  outcome   String
+  reason    String?
+  metadata  Json?
+  timestamp DateTime @default(now())
+
+  @@index([timestamp])
+}
