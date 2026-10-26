@@ -1,0 +1,1498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MessWise: The Kamar-Taj Refectory | Webster 2026</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            deepMaroon: '#702632',
+            terracotta: '#B85C38',
+            turmericGold: '#D9A441',
+            warmIvory: '#FAF6EF',
+            riceWhite: '#FFFDF9',
+            leafGreen: '#426B4F',
+            mutedSage: '#E8EEE5',
+            charcoal: '#282725',
+            mutedStone: '#77736D',
+            softBorder: '#E8DFD3',
+            warningAmber: '#A96612',
+            errorRed: '#B42332',
+            appDark: '#171412',
+            surface: '#211D1A',
+            surfaceElevated: '#2A2521',
+            borderDark: '#3A332D',
+            textPrimary: '#F3EDE4',
+            textMuted: '#A89F94',
+            primaryDark: '#8E3445',
+            primaryAccent: '#E58A98',
+            gold: '#E4B454',
+            successDark: '#7FB28F',
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- React 18 & ReactDOM CDN -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  
+  <!-- Babel Standalone (JSX in-browser compiler) -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- Firebase SDKs (Compat for Web) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+
+  <!-- Google Fonts: Plus Jakarta Sans, DM Serif Display & Noto Sans Devanagari -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Noto+Sans+Devanagari:wght@400;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    body { font-family: 'Plus Jakarta Sans', 'Noto Sans Devanagari', sans-serif; }
+    .font-serif { font-family: 'DM Serif Display', serif; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-fadeIn { animation: fadeIn 0.25s ease-out forwards; }
+  </style>
+</head>
+<body class="bg-warmIvory text-charcoal antialiased transition-colors duration-200">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, createContext, useContext } = React;
+
+    // --- 1. FIREBASE CONFIGURATION (Provided by User) ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyBWAxqvLod_tuGFJ-yZbTSkb7Hk4ECrFro",
+      authDomain: "messwise-5fbd7.firebaseapp.com",
+      projectId: "messwise-5fbd7",
+      storageBucket: "messwise-5fbd7.firebasestorage.app",
+      messagingSenderId: "1079327182916",
+      appId: "1:1079327182916:web:ee7438aa2732bc0d18ac11",
+      measurementId: "G-5VH47H4ZF2"
+    };
+
+    if (typeof firebase !== 'undefined' && !firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+
+    // --- 2. SOUND SYNTHESIZER ENGINE (Web Audio API) ---
+    class SoundEngine {
+      constructor() { this.ctx = null; }
+      init() {
+        if (!this.ctx && typeof window !== 'undefined') {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (AudioContextClass) this.ctx = new AudioContextClass();
+        }
+      }
+      playSuccess() {
+        this.init(); if (!this.ctx) return;
+        const osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(587.33, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(880, this.ctx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.25);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(); osc.stop(this.ctx.currentTime + 0.25);
+      }
+      playWarning() {
+        this.init(); if (!this.ctx) return;
+        const osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(440, this.ctx.currentTime);
+        osc.frequency.setValueAtTime(349.23, this.ctx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.35);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(); osc.stop(this.ctx.currentTime + 0.35);
+      }
+      playError() {
+        this.init(); if (!this.ctx) return;
+        const osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(220, this.ctx.currentTime);
+        osc.frequency.setValueAtTime(164.81, this.ctx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.4);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(); osc.stop(this.ctx.currentTime + 0.4);
+      }
+    }
+    const sound = new SoundEngine();
+
+    // --- 3. MNNIT ALLAHABAD HOSTELS & MESS CATALOGUE ---
+    const mnnitMesses = [
+      { id: 'mess-svh', name: 'SVH Mega Mess', capacity: 900 },
+      { id: 'mess-central-boys', name: 'Patel-Tilak Central Mess', capacity: 750 },
+      { id: 'mess-tandon', name: 'PD Tandon & Malaviya Combined Mess', capacity: 600 }
+    ];
+
+    const mnnitHostels = [
+      { id: 'h-svh', name: 'Swami Vivekananda Hostel', shortCode: 'SVH', type: 'boys', messId: 'mess-svh', capacity: 850 },
+      { id: 'h-patel', name: 'Sardar Vallabh Bhai Patel Hostel', shortCode: 'Patel', type: 'boys', messId: 'mess-central-boys', capacity: 420 },
+      { id: 'h-tilak', name: 'Bal Gangadhar Tilak Hostel', shortCode: 'Tilak', type: 'boys', messId: 'mess-central-boys', capacity: 380 },
+      { id: 'h-tandon', name: 'Purushottam Das Tandon Hostel', shortCode: 'PD Tandon', type: 'boys', messId: 'mess-tandon', capacity: 320 },
+      { id: 'h-malaviya', name: 'Pt. Madan Mohan Malaviya Hostel', shortCode: 'Malaviya', type: 'boys', messId: 'mess-tandon', capacity: 300 },
+      { id: 'h-tagore', name: 'Kaviguru Rabindranath Tagore Hostel', shortCode: 'Tagore', type: 'boys', messId: 'mess-central-boys', capacity: 350 },
+      { id: 'h-raman', name: 'Sir C.V. Raman Hostel', shortCode: 'Raman', type: 'boys', messId: 'mess-tandon', capacity: 280 },
+      { id: 'h-sngh', name: 'Sarojini Naidu Girls Hostel', shortCode: 'SNGH', type: 'girls', messId: 'mess-central-boys', capacity: 360 },
+      { id: 'h-kngh', name: 'Kamala Nehru Girls Hostel', shortCode: 'KNGH', type: 'girls', messId: 'mess-central-boys', capacity: 280 },
+      { id: 'h-djgh', name: 'Diamond Jubilee Girls Hostel', shortCode: 'DJGH', type: 'girls', messId: 'mess-central-boys', capacity: 320 }
+    ];
+
+    // Seed Menu for Monday
+    const initialMondaySchedule = [
+      {
+        id: 'm-bf',
+        type: 'Breakfast',
+        title: 'Monday Morning Refectory',
+        state: 'SERVED',
+        startTime: '07:30',
+        endTime: '09:30',
+        cutoff: '06:00',
+        items: ['Stuffed Aloo Paratha (आलू पराठा)', 'Fresh Curd (दही)', 'Adrak Chai (अदरक चाय)'],
+        confirmedHeadcount: 780,
+        actualCheckIns: 742,
+        bufferPct: 6.0
+      },
+      {
+        id: 'm-lu',
+        type: 'Lunch',
+        title: 'Monday Deluxe Feast',
+        state: 'LOCKED', // In service
+        startTime: '12:30',
+        endTime: '14:30',
+        cutoff: '10:00',
+        items: ['Dehradun Jeera Rice (जीरा राइस)', 'Dal Makhani (दाल मखनी)', 'Mix Veg Sabzi (मिक्स वेज)', 'Tawa Roti (तवा रोटी)', 'Fruit Custard (कस्टर्ड)'],
+        confirmedHeadcount: 810,
+        actualCheckIns: 418,
+        bufferPct: 6.5
+      },
+      {
+        id: 'm-sn',
+        type: 'Snacks',
+        title: 'Evening Refreshment',
+        state: 'OPEN',
+        startTime: '17:00',
+        endTime: '18:15',
+        cutoff: '15:30',
+        isMessOff: false,
+        items: ['Samosa with Green & Sweet Chutney (समोसा व चटनी)', 'Hot Filter Coffee (कॉफी)'],
+        confirmedHeadcount: 690,
+        actualCheckIns: 0,
+        bufferPct: 5.0
+      },
+      {
+        id: 'm-di',
+        type: 'Dinner',
+        title: 'Monday Night Special',
+        state: 'OPEN',
+        startTime: '19:45',
+        endTime: '21:45',
+        cutoff: '18:00',
+        items: ['Paneer Butter Masala (पनीर बटर मसाला)', 'Arhar Dal Tadka (अरहर दाल)', 'Ghee Phulka Roti', 'Warm Gulab Jamun (गुलाब जामुन)', 'Bournvita Milk'],
+        confirmedHeadcount: 760,
+        actualCheckIns: 0,
+        bufferPct: 5.5
+      }
+    ];
+
+    // --- APPLICATION CONTEXT ---
+    const MessContext = createContext(null);
+
+    const MessProvider = ({ children }) => {
+      const [currentUser, setCurrentUser] = useState(null);
+      const [needsOnboarding, setNeedsOnboarding] = useState(false);
+      const [loadingAuth, setLoadingAuth] = useState(true);
+      const [theme, setTheme] = useState('light');
+      const [lang, setLang] = useState('en');
+      const [currentTime, setCurrentTime] = useState(new Date('2026-10-26T13:38:00'));
+
+      // Real clock timer ticking every second
+      useEffect(() => {
+        const timer = setInterval(() => {
+          setCurrentTime(prev => new Date(prev.getTime() + 1000));
+        }, 1000);
+        return () => clearInterval(timer);
+      }, []);
+
+      const [schedule, setSchedule] = useState(initialMondaySchedule);
+
+      // Bookings & gate redemption tracking
+      const [bookings, setBookings] = useState({
+        'm-bf': { status: 'CONSUMED', verifiedAtGate: true },
+        'm-lu': { status: 'CONSUMED', verifiedAtGate: true }, // Eligible for verified diner feedback!
+        'm-sn': { status: 'CONFIRMED', verifiedAtGate: false },
+        'm-di': { status: 'CONFIRMED', verifiedAtGate: false }
+      });
+
+      const [platePledgeStreak, setPlatePledgeStreak] = useState(16);
+      const [rebateBalanceRs, setRebateBalanceRs] = useState(675);
+
+      // Add-Ins (Addendum B3)
+      const [addIns, setAddIns] = useState([
+        {
+          id: 'ad-1',
+          mealSlot: 'Monday Lunch',
+          foodItemName: 'Cold Spiced Mattha (Buttermilk)',
+          type: 'ADD_EXTRA',
+          displayHandle: 'Resident (SVH Hostel)',
+          votesCount: 88,
+          hasVoted: false,
+          status: 'APPROVED_FOR_TRIAL',
+          feasibilityNote: 'Chef Rameshwar: 60 Litres extra batch capacity confirmed.'
+        },
+        {
+          id: 'ad-2',
+          mealSlot: 'Monday Dinner',
+          foodItemName: 'Less Oil in Paneer Gravy',
+          type: 'IMPROVE_PREPARATION',
+          displayHandle: 'Resident (PD Tandon)',
+          votesCount: 44,
+          hasVoted: false,
+          status: 'SHORTLISTED',
+          feasibilityNote: 'Committee requested low-cholesterol batch test.'
+        }
+      ]);
+
+      // Verified Quality Feedbacks (Addendum B4)
+      const [feedbacks, setFeedbacks] = useState([
+        {
+          id: 'fb-1',
+          mealTitle: 'Monday Deluxe Feast (Lunch)',
+          rating: 5,
+          comment: 'Dal Makhani was rich and properly heated at 72°C. No waiting time at Counter 1.',
+          verifiedDiner: true,
+          authorHandle: 'Verified Diner (SVH B-314)',
+          time: '13:05 IST'
+        }
+      ]);
+
+      // Public "You Said, We Did" Board
+      const [publicActions, setPublicActions] = useState([
+        { id: 'act-1', issueTitle: 'Cold Rice at Gate 2 Counter', residentVotes: 32, actionTaken: 'Commissioned two heated bain-marie hot wells.', status: 'COMPLETED' },
+        { id: 'act-2', issueTitle: 'Demand for Dalia at Breakfast', residentVotes: 48, actionTaken: 'Approved trial add-in for Monday/Thursday rotation.', status: 'IN_TRIAL' }
+      ]);
+
+      // Security Sessions Monitor
+      const [activeSessions, setActiveSessions] = useState([
+        { id: 's-1', device: 'Chrome on macOS (Prayagraj)', user: 'Arjun Sharma', role: 'STUDENT', lastActive: 'Active now' },
+        { id: 's-2', device: 'Firefox on Android (Gate Tablet)', user: 'Chef Rameshwar', role: 'MESS_STAFF', lastActive: '1m ago' },
+        { id: 's-3', device: 'Edge on Windows (Hostel Office)', user: 'Dr. Manish Gupta', role: 'HOSTEL_WARDEN', lastActive: '4m ago' }
+      ]);
+
+      // Warden Requests
+      const [wardenRequests, setWardenRequests] = useState([
+        { id: 'rq-1', resident: 'Rohit Meena (20259028)', type: 'Medical Diet (Soft Khichdi)', room: 'SVH A-104', status: 'PENDING' },
+        { id: 'rq-2', resident: 'Aakash Verma (20259001)', type: 'Extended Away Mode (Home Leave)', room: 'SVH C-212', status: 'PENDING' }
+      ]);
+
+      // Quality Checks Log
+      const [qualityChecks, setQualityChecks] = useState([
+        { id: 'qc-1', mealId: 'm-lu', stage: 'cooked_food', temp: 72, hygiene: true, status: 'PASS', inspector: 'Sunita Verma', time: '12:15 IST' }
+      ]);
+
+      // Firebase Auth Listener
+      useEffect(() => {
+        if (typeof firebase === 'undefined') {
+          setLoadingAuth(false);
+          return;
+        }
+        const unsubscribe = firebase.auth().onAuthStateChanged((user) => {
+          if (user) {
+            const savedProfile = localStorage.getItem(`messwise_profile_${user.uid}`);
+            if (savedProfile) {
+              setCurrentUser(JSON.parse(savedProfile));
+              setNeedsOnboarding(false);
+            } else {
+              setCurrentUser({
+                uid: user.uid,
+                name: user.displayName || user.email.split('@')[0],
+                email: user.email,
+                photoURL: user.photoURL,
+                role: 'STUDENT',
+                hostelId: 'h-svh',
+                hostelName: 'Swami Vivekananda Hostel (SVH)',
+                room: 'B-314'
+              });
+              setNeedsOnboarding(true);
+            }
+          } else {
+            setCurrentUser(null);
+            setNeedsOnboarding(false);
+          }
+          setLoadingAuth(false);
+        });
+        return () => unsubscribe();
+      }, []);
+
+      useEffect(() => {
+        if (theme === 'dark') document.documentElement.classList.add('dark');
+        else document.documentElement.classList.remove('dark');
+      }, [theme]);
+
+      // Real Firebase Google Sign-In with Fallback Simulator
+      const signInWithGoogle = async () => {
+        try {
+          const provider = new firebase.auth.GoogleAuthProvider();
+          provider.setCustomParameters({ prompt: 'select_account' });
+          const res = await firebase.auth().signInWithPopup(provider);
+          sound.playSuccess();
+          return { success: true, user: res.user };
+        } catch (err) {
+          console.warn("Firebase Auth popup notice:", err);
+          return { success: false, error: err.message, code: err.code };
+        }
+      };
+
+      // Direct Persona Login (Demo & Sandbox Mode)
+      const loginDirect = (profile) => {
+        setCurrentUser(profile);
+        setNeedsOnboarding(false);
+        sound.playSuccess();
+      };
+
+      const completeOnboarding = (role, hostelId, room) => {
+        const hostelObj = mnnitHostels.find(h => h.id === hostelId) || mnnitHostels[0];
+        const updated = {
+          ...currentUser,
+          role,
+          hostelId,
+          hostelName: hostelObj.name,
+          room: room || 'Room 101'
+        };
+        setCurrentUser(updated);
+        localStorage.setItem(`messwise_profile_${currentUser.uid}`, JSON.stringify(updated));
+        setNeedsOnboarding(false);
+        sound.playSuccess();
+      };
+
+      const signOut = async () => {
+        try {
+          if (typeof firebase !== 'undefined' && firebase.auth) {
+            await firebase.auth().signOut();
+          }
+        } catch (e) {}
+        setCurrentUser(null);
+        setNeedsOnboarding(false);
+      };
+
+      const toggleMealBooking = (mealId) => {
+        const meal = schedule.find(m => m.id === mealId);
+        if (!meal || meal.state !== 'OPEN') {
+          sound.playWarning();
+          return { success: false, message: 'Cutoff passed! Headcount is locked in the kitchen.' };
+        }
+        const current = bookings[mealId];
+        if (current?.status === 'CONFIRMED') {
+          setBookings(prev => ({ ...prev, [mealId]: { status: 'CANCELLED', verifiedAtGate: false } }));
+          setRebateBalanceRs(r => r + 75);
+          setPlatePledgeStreak(s => s + 1);
+          sound.playSuccess();
+          return { success: true, message: 'Meal cancelled! ₹75 credited to your hostel rebate ledger.' };
+        } else {
+          setBookings(prev => ({ ...prev, [mealId]: { status: 'CONFIRMED', verifiedAtGate: false } }));
+          setRebateBalanceRs(r => Math.max(0, r - 75));
+          sound.playSuccess();
+          return { success: true, message: 'Meal confirmed! See you at the refectory.' };
+        }
+      };
+
+      // Gate QR Verification with Anti-Double Dipping & Cross-Hostel Rejection
+      const scanGatePass = (code) => {
+        if (code.includes('WRONG_MESS') || code.includes('TANDON')) {
+          sound.playWarning();
+          return { code: 'WRONG_MESS', message: 'Wrong Mess Hall! Resident belongs to PD Tandon Mess, not SVH.', resident: 'Priyanshu Patel (PD Tandon)' };
+        }
+        if (code.includes('ALREADY_USED')) {
+          sound.playWarning();
+          return { code: 'ALREADY_USED', message: 'Pass Already Scanned at 12:44 PM! Duplicate redemption blocked.', resident: 'Arjun Sharma (SVH)' };
+        }
+        if (code.includes('EXP')) {
+          sound.playError();
+          return { code: 'EXPIRED', message: 'HMAC Token Expired (>30s window exceeded). Refresh token.' };
+        }
+        // Valid
+        sound.playSuccess();
+        setSchedule(prev => prev.map(m => m.id === 'm-lu' ? { ...m, actualCheckIns: m.actualCheckIns + 1 } : m));
+        setBookings(prev => ({ ...prev, 'm-lu': { status: 'CONSUMED', verifiedAtGate: true } }));
+        return { code: 'SUCCESS', message: 'Pass Verified: Monday Feast Lunch Approved', resident: 'Arjun Sharma (20259028) • SVH' };
+      };
+
+      const voteAddIn = (id) => {
+        setAddIns(prev => prev.map(a => {
+          if (a.id !== id || a.hasVoted) return a;
+          sound.playSuccess();
+          return { ...a, votesCount: a.votesCount + 1, hasVoted: true };
+        }));
+      };
+
+      const proposeAddIn = (item) => {
+        setAddIns(prev => [item, ...prev]);
+        sound.playSuccess();
+      };
+
+      const submitVerifiedFeedback = (mealId, rating, comment) => {
+        const b = bookings[mealId];
+        if (!b || !b.verifiedAtGate) {
+          sound.playError();
+          return { success: false, message: 'Denied: Only verified diners who redeemed this meal at the gate can submit feedback.' };
+        }
+        const newFb = {
+          id: `fb-${Date.now()}`,
+          mealTitle: schedule.find(s => s.id === mealId)?.title || 'Meal',
+          rating,
+          comment,
+          verifiedDiner: true,
+          authorHandle: `Verified Resident (${currentUser.hostelName})`,
+          time: 'Just now'
+        };
+        setFeedbacks(prev => [newFb, ...prev]);
+        sound.playSuccess();
+        return { success: true, message: 'Verified feedback saved! Refectory accountability updated.' };
+      };
+
+      const updateWardenRequest = (id, status) => {
+        setWardenRequests(prev => prev.map(r => r.id === id ? { ...r, status } : r));
+        sound.playSuccess();
+      };
+
+      const submitQC = (temp, hygiene, status) => {
+        const newCheck = {
+          id: `qc-${Date.now()}`,
+          mealId: 'm-lu',
+          stage: 'cooked_food',
+          temp,
+          hygiene,
+          status,
+          inspector: currentUser.name,
+          time: currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+        setQualityChecks(prev => [newCheck, ...prev]);
+        if (status === 'PASS') sound.playSuccess();
+        else sound.playError();
+      };
+
+      return (
+        <MessContext.Provider value={{
+          currentUser, needsOnboarding, completeOnboarding,
+          loadingAuth, signInWithGoogle, loginDirect, signOut,
+          theme, setTheme, lang, setLang,
+          currentTime,
+          schedule, bookings, toggleMealBooking, scanGatePass,
+          platePledgeStreak, rebateBalanceRs,
+          addIns, voteAddIn, proposeAddIn,
+          feedbacks, submitVerifiedFeedback,
+          publicActions,
+          activeSessions, setActiveSessions,
+          wardenRequests, updateWardenRequest,
+          qualityChecks, submitQC
+        }}>
+          {children}
+        </MessContext.Provider>
+      );
+    };
+
+    const useMess = () => useContext(MessContext);
+
+    // --- 4. LOGIN & AUTHENTICATION COMPONENT ---
+    const LoginPage = () => {
+      const { signInWithGoogle, loginDirect } = useMess();
+      const [authNotice, setAuthNotice] = useState(null);
+      const [isProcessing, setIsProcessing] = useState(false);
+
+      const handleGoogleAuth = async () => {
+        setIsProcessing(true);
+        setAuthNotice(null);
+        const res = await signInWithGoogle();
+        if (!res.success) {
+          if (res.code === 'auth/unauthorized-domain') {
+            setAuthNotice("Notice: 127.0.0.1 is not yet whitelisted in Firebase Console. You can either switch your browser address to http://localhost:5500, or choose a 1-click test persona below.");
+          } else {
+            setAuthNotice(res.error || "OAuth cancelled or popup blocked.");
+          }
+        }
+        setIsProcessing(false);
+      };
+
+      return (
+        <div className="min-h-screen bg-warmIvory dark:bg-appDark flex items-center justify-center p-4">
+          <div className="max-w-4xl w-full bg-riceWhite dark:bg-surface border border-softBorder dark:border-borderDark rounded-3xl shadow-2xl overflow-hidden grid grid-cols-1 md:grid-cols-2">
+            
+            {/* Left: Sign In Actions */}
+            <div className="p-8 sm:p-10 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-deepMaroon flex items-center justify-center text-turmericGold font-serif font-black text-xl">M</div>
+                  <div>
+                    <h1 className="font-serif font-bold text-lg text-deepMaroon dark:text-primaryAccent">MessWise</h1>
+                    <p className="text-[10px] text-mutedStone uppercase tracking-wider">The Kamar-Taj Refectory</p>
+                  </div>
+                </div>
+
+                <div className="inline-block px-2.5 py-1 bg-turmericGold/15 border border-turmericGold/30 text-turmericGold rounded-full text-[10px] font-bold mb-4">
+                  Webster 2026 • Team Terror Code 404 (ID: 254)
+                </div>
+
+                <h2 className="text-xl font-bold text-charcoal dark:text-textPrimary">Sign In to Campus Refectory</h2>
+                <p className="text-xs text-mutedStone mt-1">Live authentication integrated with Firebase OAuth.</p>
+
+                {authNotice && (
+                  <div className="mt-4 p-3 bg-yellow-50 border border-warningAmber text-yellow-900 rounded-xl text-xs leading-relaxed">
+                    ⚠️ {authNotice}
+                  </div>
+                )}
+
+                {/* Live Google Button */}
+                <div className="mt-6 space-y-3">
+                  <button
+                    disabled={isProcessing}
+                    onClick={handleGoogleAuth}
+                    className="w-full py-3.5 px-4 bg-white hover:bg-gray-50 text-gray-700 font-semibold text-xs rounded-xl border border-gray-300 shadow-sm flex items-center justify-center gap-3 transition-all hover:shadow cursor-pointer"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24">
+                      <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
+                      <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.27 21.36 7.33 24 12 24z"/>
+                      <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
+                      <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.27 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+                    </svg>
+                    <span>{isProcessing ? 'Connecting...' : 'Continue with Google (Live Account)'}</span>
+                  </button>
+
+                  <div className="relative flex py-2 items-center">
+                    <div className="flex-grow border-t border-softBorder"></div>
+                    <span className="flex-shrink mx-3 text-[10px] text-mutedStone uppercase">or 1-click test login</span>
+                    <div className="flex-grow border-t border-softBorder"></div>
+                  </div>
+
+                  {/* 1-Click Sandbox Logins */}
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <button
+                      onClick={() => loginDirect({
+                        uid: 'dev-arjun',
+                        name: 'Vansshiekaa Singh',
+                        email: 'vansshiekaa.20259028@mnnit.ac.in',
+                        role: 'STUDENT',
+                        hostelId: 'h-sngh',
+                        hostelName: 'Sarojini Naidu Girls Hostel',
+                        room: 'A-208'
+                      })}
+                      className="p-2 border rounded-lg bg-warmIvory text-left hover:border-deepMaroon"
+                    >
+                      <div className="font-bold">Student Resident</div>
+                      <div className="text-[10px] text-mutedStone">Hostel SNGH • Room A-208</div>
+                    </button>
+
+                    <button
+                      onClick={() => loginDirect({
+                        uid: 'dev-staff',
+                        name: 'Chef Rameshwar Dayal',
+                        email: 'rameshwar.mess@mnnit.ac.in',
+                        role: 'MESS_STAFF',
+                        hostelId: 'h-svh',
+                        hostelName: 'SVH Mega Mess',
+                        room: 'Kitchen Station'
+                      })}
+                      className="p-2 border rounded-lg bg-warmIvory text-left hover:border-deepMaroon"
+                    >
+                      <div className="font-bold">Mess Staff</div>
+                      <div className="text-[10px] text-mutedStone">Scanner & Prep Telemetry</div>
+                    </button>
+
+                    <button
+                      onClick={() => loginDirect({
+                        uid: 'dev-warden',
+                        name: 'Dr. Manish Gupta',
+                        email: 'warden.svh@mnnit.ac.in',
+                        role: 'HOSTEL_WARDEN',
+                        hostelId: 'h-svh',
+                        hostelName: 'SVH Hostel Office',
+                        room: 'Warden Suite'
+                      })}
+                      className="p-2 border rounded-lg bg-warmIvory text-left hover:border-deepMaroon"
+                    >
+                      <div className="font-bold">Hostel Warden</div>
+                      <div className="text-[10px] text-mutedStone">Medical Diets & Approvals</div>
+                    </button>
+
+                    <button
+                      onClick={() => loginDirect({
+                        uid: 'dev-admin',
+                        name: 'Prof. R.K. Srivastava',
+                        email: 'chief.warden@mnnit.ac.in',
+                        role: 'ADMIN',
+                        hostelId: 'all',
+                        hostelName: 'Administration Warden',
+                        room: 'Council of Wardens'
+                      })}
+                      className="p-2 border rounded-lg bg-warmIvory text-left hover:border-deepMaroon"
+                    >
+                      <div className="font-bold">Chief Admin</div>
+                      <div className="text-[10px] text-mutedStone">Campus-wide Control</div>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="text-[10px] text-mutedStone border-t pt-3 mt-4">
+                Firebase Project: <strong>messwise-5fbd7</strong> • Real-time telemetry active
+              </div>
+            </div>
+
+            {/* Right: Abstract & Visual */}
+            <div className="bg-gradient-to-br from-[#531b25] to-deepMaroon text-white p-8 sm:p-10 flex flex-col justify-between">
+              <div className="space-y-4">
+                <span className="text-[10px] font-bold text-turmericGold uppercase tracking-wider bg-black/20 px-3 py-1 rounded-full border border-turmericGold/30">
+                  MNNIT Allahabad Pilot
+                </span>
+                <h3 className="text-2xl font-serif font-black leading-tight text-riceWhite">
+                  "Every Meal Accounted For. Every Resource Respected."
+                </h3>
+                <p className="text-xs text-white/80 leading-relaxed">
+                  No guesswork cooking. Automated cutoff locking, rotating HMAC QR check-ins, explainable serving standards, verified student quality ratings, and transparent hostel rebate ledgers.
+                </p>
+              </div>
+
+              <div className="border-t border-white/20 pt-4 text-[11px] text-white/80 space-y-1 font-mono">
+                <div>Team: <strong>Terror Code 404</strong> (Team ID: 254)</div>
+                <div>Members: Vansshiekaa (20259028), Ankur (20259001), Saksham (20259023)</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      );
+    };
+
+    // --- 5. ONBOARDING ROLE SELECTION (For New Google Users) ---
+    const RoleOnboardingModal = () => {
+      const { currentUser, completeOnboarding } = useMess();
+      const [selectedRole, setSelectedRole] = useState('STUDENT');
+      const [selectedHostel, setSelectedHostel] = useState('h-svh');
+      const [roomNo, setRoomNo] = useState('B-314');
+
+      return (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-riceWhite dark:bg-surface border border-softBorder rounded-2xl shadow-2xl p-6 text-charcoal dark:text-textPrimary animate-fadeIn space-y-4">
+            <div>
+              <span className="text-[10px] font-bold uppercase text-terracotta tracking-wider">Welcome to MessWise</span>
+              <h3 className="font-bold text-lg text-deepMaroon dark:text-primaryAccent mt-0.5">Complete Your Refectory Profile</h3>
+              <p className="text-xs text-mutedStone">Signed in as <strong>{currentUser.email}</strong>. Select your role & assigned hostel:</p>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="font-bold block mb-1">Select Your Primary Role:</label>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {[
+                    { id: 'STUDENT', label: 'Student Resident' },
+                    { id: 'MESS_STAFF', label: 'Mess Staff / Cook' },
+                    { id: 'HOSTEL_WARDEN', label: 'Hostel Warden' },
+                    { id: 'ADMIN', label: 'Mess Admin / Office' }
+                  ].map((r) => (
+                    <button
+                      type="button"
+                      key={r.id}
+                      onClick={() => setSelectedRole(r.id)}
+                      className={`p-2.5 rounded-lg border font-semibold text-left transition-all ${
+                        selectedRole === r.id ? 'bg-deepMaroon text-white border-deepMaroon' : 'bg-warmIvory border-softBorder hover:border-terracotta'
+                      }`}
+                    >
+                      {r.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="font-bold block mb-1">Assigned Hostel Complex:</label>
+                <select
+                  value={selectedHostel}
+                  onChange={(e) => setSelectedHostel(e.target.value)}
+                  className="w-full p-2 border rounded-lg bg-warmIvory dark:bg-surfaceElevated text-xs"
+                >
+                  {mnnitHostels.map((h) => (
+                    <option key={h.id} value={h.id}>{h.name} ({h.shortCode})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="font-bold block mb-1">Room / Designation Number:</label>
+                <input
+                  type="text"
+                  value={roomNo}
+                  onChange={(e) => setRoomNo(e.target.value)}
+                  placeholder="e.g. B-314 or Staff Desk"
+                  className="w-full p-2 border rounded-lg bg-warmIvory dark:bg-surfaceElevated text-xs font-mono"
+                />
+              </div>
+            </div>
+
+            <button
+              onClick={() => completeOnboarding(selectedRole, selectedHostel, roomNo)}
+              className="w-full py-2.5 bg-deepMaroon text-white font-bold text-xs rounded-lg hover:bg-deepMaroon/90 shadow-sm"
+            >
+              Confirm Profile & Enter Refectory →
+            </button>
+          </div>
+        </div>
+      );
+    };
+
+    // --- 6. STUDENT PORTAL (Rotating QR, Add-Ins, Verified Feedback) ---
+    const StudentPortal = () => {
+      const {
+        currentUser, currentTime,
+        schedule, bookings, toggleMealBooking,
+        platePledgeStreak, rebateBalanceRs,
+        addIns, voteAddIn, proposeAddIn,
+        feedbacks, submitVerifiedFeedback
+      } = useMess();
+
+      const [activeTab, setActiveTab] = useState('meals');
+      const [tokenSeconds, setTokenSeconds] = useState(30);
+
+      // Add-In modal state
+      const [showAddInModal, setShowAddInModal] = useState(false);
+      const [addInName, setAddInName] = useState('');
+      const [addInType, setAddInType] = useState('ADD_EXTRA');
+      const [addInReason, setAddInReason] = useState('');
+
+      // Verified Feedback state
+      const [fbRating, setFbRating] = useState(5);
+      const [fbComment, setFbComment] = useState('');
+      const [fbMsg, setFbMsg] = useState(null);
+
+      useEffect(() => {
+        const timer = setInterval(() => {
+          setTokenSeconds(s => (s <= 1 ? 30 : s - 1));
+        }, 1000);
+        return () => clearInterval(timer);
+      }, []);
+
+      const handleAddInSubmit = (e) => {
+        e.preventDefault();
+        if (!addInName.trim()) return;
+        proposeAddIn({
+          id: `adin-${Date.now()}`,
+          mealSlot: 'Monday Dinner',
+          foodItemName: addInName,
+          type: addInType,
+          displayHandle: `Resident of ${currentUser.hostelName}`,
+          votesCount: 1,
+          hasVoted: true,
+          status: 'SUBMITTED',
+          feasibilityNote: 'Awaiting committee & supervisor review'
+        });
+        setShowAddInModal(false);
+        setAddInName('');
+      };
+
+      const handleFeedbackSubmit = () => {
+        const res = submitVerifiedFeedback('m-lu', fbRating, fbComment);
+        setFbMsg(res);
+      };
+
+      return (
+        <div className="space-y-6">
+          {/* Welcome Header */}
+          <div className="bg-gradient-to-r from-deepMaroon to-[#531b25] text-riceWhite p-6 rounded-2xl shadow-md flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+            <div>
+              <span className="text-xs font-semibold px-2.5 py-1 bg-turmericGold/20 text-turmericGold rounded-full border border-turmericGold/30">
+                {currentUser.hostelName} • Room {currentUser.room}
+              </span>
+              <h1 className="text-2xl md:text-3xl font-bold font-serif mt-2">Namaste, {currentUser.name}</h1>
+              <p className="text-xs text-white/80 mt-1">Refectory: <strong>SVH Mega Mess</strong> • Monday Cycle Active</p>
+            </div>
+            <div className="flex gap-3">
+              <div className="bg-black/25 backdrop-blur px-4 py-2 rounded-xl border border-white/10 text-center">
+                <span className="text-[10px] uppercase text-white/70 block">Pledge Streak</span>
+                <span className="text-lg font-bold font-mono text-turmericGold">🔥 {platePledgeStreak} Days</span>
+              </div>
+              <div className="bg-black/25 backdrop-blur px-4 py-2 rounded-xl border border-white/10 text-center">
+                <span className="text-[10px] uppercase text-white/70 block">Hostel Rebate</span>
+                <span className="text-lg font-bold font-mono text-leafGreen">₹{rebateBalanceRs}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Sub Navigation */}
+          <div className="flex gap-2 border-b border-softBorder dark:border-borderDark pb-2 overflow-x-auto text-xs font-semibold">
+            <button
+              onClick={() => setActiveTab('meals')}
+              className={`px-3.5 py-1.5 rounded-lg ${activeTab === 'meals' ? 'bg-deepMaroon text-white' : 'text-mutedStone'}`}
+            >
+              Today's Meals (Monday)
+            </button>
+            <button
+              onClick={() => setActiveTab('qr')}
+              className={`px-3.5 py-1.5 rounded-lg ${activeTab === 'qr' ? 'bg-deepMaroon text-white' : 'text-mutedStone'}`}
+            >
+              Live Rotating QR Pass (Gate Security)
+            </button>
+            <button
+              onClick={() => setActiveTab('addins')}
+              className={`px-3.5 py-1.5 rounded-lg ${activeTab === 'addins' ? 'bg-deepMaroon text-white' : 'text-mutedStone'}`}
+            >
+              Meal Add-In Recommendations ({addIns.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('feedback')}
+              className={`px-3.5 py-1.5 rounded-lg ${activeTab === 'feedback' ? 'bg-deepMaroon text-white' : 'text-mutedStone'}`}
+            >
+              Verified Diner Quality Feedback
+            </button>
+          </div>
+
+          {/* Tab 1: Meals */}
+          {activeTab === 'meals' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {schedule.map((meal) => {
+                const b = bookings[meal.id];
+                const isLocked = meal.state !== 'OPEN';
+
+                return (
+                  <div key={meal.id} className="bg-riceWhite dark:bg-surface border border-softBorder dark:border-borderDark rounded-2xl p-5 shadow-sm space-y-3">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-terracotta">{meal.type} • {meal.startTime} - {meal.endTime}</span>
+                        <h3 className="font-bold text-base mt-0.5">{meal.title}</h3>
+                      </div>
+                      <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full capitalize ${
+                        b?.status === 'CONSUMED' ? 'bg-blue-100 text-blue-800' :
+                        b?.status === 'CONFIRMED' ? 'bg-mutedSage text-leafGreen' : 'bg-red-100 text-errorRed'
+                      }`}>
+                        {b?.status || 'NOT BOOKED'}
+                      </span>
+                    </div>
+
+                    <div className="border-y border-softBorder/60 py-2.5 space-y-1 text-xs text-mutedStone">
+                      {meal.items.map((it, idx) => (
+                        <div key={idx} className="flex justify-between">
+                          <span>• {it}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex justify-between items-center pt-1 text-xs">
+                      <div>
+                        <span className="text-[10px] text-mutedStone block">Cutoff:</span>
+                        <span className="font-mono font-bold">{isLocked ? 'Locked' : `${meal.cutoff} IST`}</span>
+                      </div>
+
+                      {b?.status === 'CONSUMED' ? (
+                        <span className="text-leafGreen font-bold flex items-center gap-1">✓ Redeemed at Gate</span>
+                      ) : (
+                        <button
+                          disabled={isLocked}
+                          onClick={() => toggleMealBooking(meal.id)}
+                          className={`px-3 py-1.5 rounded-lg font-semibold ${
+                            isLocked ? 'bg-gray-200 text-gray-500 cursor-not-allowed' :
+                            b?.status === 'CONFIRMED' ? 'border border-errorRed text-errorRed hover:bg-errorRed hover:text-white' :
+                            'bg-deepMaroon text-white'
+                          }`}
+                        >
+                          {isLocked ? 'Cutoff Passed' : b?.status === 'CONFIRMED' ? 'Cancel & Rebate ₹75' : 'Confirm Plate'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Tab 2: Live Rotating QR Pass (HMAC-SHA256 Rotating every 30s) */}
+          {activeTab === 'qr' && (
+            <div className="max-w-md mx-auto bg-riceWhite dark:bg-surface border border-softBorder dark:border-borderDark rounded-2xl p-6 shadow-xl text-center space-y-3">
+              <span className="text-[10px] font-bold text-turmericGold uppercase bg-turmericGold/10 px-3 py-1 rounded-full border border-turmericGold/30">
+                Anti-Double Dipping Gate Pass
+              </span>
+              <h2 className="text-base font-bold text-deepMaroon dark:text-primaryAccent">
+                Monday Lunch Pass • {currentUser.name}
+              </h2>
+              <p className="text-xs text-mutedStone">Valid only at SVH Mega Mess Gate Scanners</p>
+
+              <div className="my-3 p-4 bg-white rounded-xl shadow-inner inline-block border-2 border-dashed border-gray-300">
+                <div className="w-48 h-48 mx-auto bg-white flex flex-col justify-between p-2 border-4 border-black">
+                  <div className="flex justify-between">
+                    <div className="w-8 h-8 bg-black p-1"><div className="w-full h-full bg-white p-0.5"><div className="w-full h-full bg-black"></div></div></div>
+                    <div className="w-8 h-8 bg-black p-1"><div className="w-full h-full bg-white p-0.5"><div className="w-full h-full bg-black"></div></div></div>
+                  </div>
+                  <div className="font-mono text-[8px] text-black font-bold break-all p-1">
+                    HMAC_SHA256_{currentUser.uid.substring(0, 10)}_T{tokenSeconds}
+                  </div>
+                  <div className="flex justify-between items-end">
+                    <div className="w-8 h-8 bg-black p-1"><div className="w-full h-full bg-white p-0.5"><div className="w-full h-full bg-black"></div></div></div>
+                    <div className="font-mono text-[8px] font-bold text-black border p-0.5">MNNIT</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="text-xs font-mono font-bold text-deepMaroon dark:text-gold flex justify-center items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-turmericGold animate-ping"></span>
+                Rotating token in: {tokenSeconds}s
+              </div>
+              <p className="text-[11px] text-mutedStone">
+                Single-use validation. Duplicate screenshots will trigger an audible double-dipping alert.
+              </p>
+            </div>
+          )}
+
+          {/* Tab 3: Meal Add-Ins (Addendum B3) */}
+          {activeTab === 'addins' && (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="font-bold text-base text-deepMaroon dark:text-primaryAccent">Meal Add-In Recommendations</h3>
+                  <p className="text-xs text-mutedStone">Propose extras, dish swaps, or improvements. Voted by students, verified by supervisor.</p>
+                </div>
+                <button
+                  onClick={() => setShowAddInModal(true)}
+                  className="px-3 py-1.5 bg-deepMaroon text-white font-bold text-xs rounded-lg hover:bg-deepMaroon/90 shadow-sm"
+                >
+                  + Propose Add-In
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {addIns.map((ad) => (
+                  <div key={ad.id} className="bg-riceWhite dark:bg-surface border border-softBorder dark:border-borderDark rounded-xl p-4 shadow-sm space-y-2">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-terracotta">{ad.mealSlot} • {ad.type.replace('_', ' ')}</span>
+                        <h4 className="font-bold text-sm text-charcoal dark:text-textPrimary mt-0.5">{ad.foodItemName}</h4>
+                        <span className="text-[10px] text-mutedStone">By: {ad.displayHandle}</span>
+                      </div>
+                      <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded ${
+                        ad.status === 'APPROVED_FOR_TRIAL' ? 'bg-leafGreen/15 text-leafGreen' :
+                        ad.status === 'SHORTLISTED' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-700'
+                      }`}>
+                        {ad.status.replace('_', ' ')}
+                      </span>
+                    </div>
+
+                    <div className="p-2 bg-warmIvory dark:bg-surfaceElevated rounded-lg text-[11px] text-charcoal dark:text-textPrimary border border-softBorder">
+                      ⚙️ {ad.feasibilityNote}
+                    </div>
+
+                    <div className="pt-2 border-t border-softBorder flex justify-between items-center text-xs">
+                      <span className="font-mono text-mutedStone">{ad.votesCount} resident votes</span>
+                      <button
+                        disabled={ad.hasVoted}
+                        onClick={() => voteAddIn(ad.id)}
+                        className={`px-3 py-1 rounded text-xs font-semibold ${
+                          ad.hasVoted ? 'bg-gray-200 text-gray-500 cursor-default' : 'bg-deepMaroon text-white hover:bg-deepMaroon/90'
+                        }`}
+                      >
+                        {ad.hasVoted ? '✓ Upvoted' : '▲ Upvote'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Add-In Propose Modal */}
+              {showAddInModal && (
+                <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+                  <form onSubmit={handleAddInSubmit} className="w-full max-w-md bg-white dark:bg-surface rounded-2xl shadow-2xl p-6 text-charcoal dark:text-textPrimary space-y-3 animate-fadeIn">
+                    <h3 className="font-bold text-base text-deepMaroon">Propose a Meal Add-In</h3>
+                    <div>
+                      <label className="text-[11px] font-bold block mb-1">Item Name:</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Cold Spiced Mattha or Fresh Cucumber Salad"
+                        value={addInName}
+                        onChange={(e) => setAddInName(e.target.value)}
+                        className="w-full p-2 border rounded-lg text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-bold block mb-1">Type:</label>
+                      <select
+                        value={addInType}
+                        onChange={(e) => setAddInType(e.target.value)}
+                        className="w-full p-2 border rounded-lg text-xs"
+                      >
+                        <option value="ADD_EXTRA">Extra Item (+ Add to Menu)</option>
+                        <option value="SWAP_ITEM">Swap (Replace an Existing Dish)</option>
+                        <option value="IMPROVE_PREPARATION">Improvement (Less Oil, More Salt, Spices)</option>
+                      </select>
+                    </div>
+                    <div className="flex gap-2 pt-2">
+                      <button type="submit" className="flex-1 py-2 bg-deepMaroon text-white font-bold text-xs rounded-lg">Submit Proposal</button>
+                      <button type="button" onClick={() => setShowAddInModal(false)} className="px-4 py-2 border rounded-lg text-xs">Cancel</button>
+                    </div>
+                  </form>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Tab 4: Verified Quality Feedback (Addendum B4) */}
+          {activeTab === 'feedback' && (
+            <div className="space-y-6">
+              <div className="bg-riceWhite dark:bg-surface border border-softBorder dark:border-borderDark rounded-2xl p-6 shadow-sm space-y-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-base text-deepMaroon dark:text-primaryAccent">Verified Diner Quality Feedback</h3>
+                    <span className="px-2 py-0.5 bg-leafGreen/10 border border-leafGreen/30 text-leafGreen text-[10px] font-bold rounded">
+                      Gate Redemption Verified
+                    </span>
+                  </div>
+                  <p className="text-xs text-mutedStone mt-0.5">
+                    Your check-in for <strong>Monday Deluxe Feast (Lunch)</strong> is verified. Rate the food quality:
+                  </p>
+                </div>
+
+                {fbMsg && (
+                  <div className={`p-3 rounded-xl text-xs font-semibold ${fbMsg.success ? 'bg-leafGreen/10 text-leafGreen border border-leafGreen/30' : 'bg-red-100 text-errorRed'}`}>
+                    {fbMsg.message}
+                  </div>
+                )}
+
+                <div className="space-y-3 text-xs">
+                  <div>
+                    <label className="font-bold block mb-1">Overall Quality Rating: {fbRating} / 5</label>
+                    <input
+                      type="range" min="1" max="5" value={fbRating}
+                      onChange={(e) => setFbRating(Number(e.target.value))}
+                      className="w-full accent-deepMaroon"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-bold block mb-1">Structured Observations (Taste, Freshness, Hygiene, Temperature):</label>
+                    <textarea
+                      rows="3"
+                      value={fbComment}
+                      onChange={(e) => setFbComment(e.target.value)}
+                      placeholder="Comment on Dal Makhani taste, hot-holding temperature, or cleanliness..."
+                      className="w-full p-2.5 rounded-lg border border-softBorder bg-warmIvory dark:bg-surfaceElevated"
+                    />
+                  </div>
+
+                  <div className="flex justify-between items-center pt-2">
+                    <span className="text-[11px] text-mutedStone">Submitted with verified cryptographic token</span>
+                    <button
+                      onClick={handleFeedbackSubmit}
+                      className="px-4 py-2 bg-deepMaroon text-white font-bold text-xs rounded-lg hover:bg-deepMaroon/90 shadow-sm"
+                    >
+                      Submit Verified Feedback
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Feedbacks Stream */}
+              <div className="space-y-3">
+                <h4 className="font-bold text-xs uppercase tracking-wider text-mutedStone">Recent Verified Diners Feedback</h4>
+                {feedbacks.map((f) => (
+                  <div key={f.id} className="p-4 bg-riceWhite dark:bg-surface border border-softBorder rounded-xl text-xs space-y-1">
+                    <div className="flex justify-between items-center font-bold">
+                      <span>{f.mealTitle}</span>
+                      <span className="text-turmericGold">★ {f.rating} / 5</span>
+                    </div>
+                    <p className="text-mutedStone">"{f.comment}"</p>
+                    <div className="text-[10px] text-mutedStone font-mono pt-1">
+                      {f.authorHandle} • {f.time}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    // --- 7. STAFF SCANNER & KITCHEN TELEMETRY ---
+    const StaffPortal = () => {
+      const { scanGatePass, schedule, qualityChecks, submitQC, currentTime } = useMess();
+      const [scanResult, setScanResult] = useState(null);
+      const [qcTemp, setQcTemp] = useState(72);
+      const [qcHygiene, setQcHygiene] = useState(true);
+
+      const lunch = schedule.find(s => s.id === 'm-lu');
+
+      return (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            {/* Left: Scanner Frame */}
+            <div className="lg:col-span-2 bg-riceWhite dark:bg-surface border border-softBorder dark:border-borderDark rounded-2xl p-6 shadow-sm space-y-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="font-bold text-base text-deepMaroon dark:text-primaryAccent">SVH Mega Mess Gate 1 Scanner</h3>
+                  <p className="text-xs text-mutedStone">Active Session: Monday Feast Lunch</p>
+                </div>
+                <span className="font-mono text-xs font-bold px-3 py-1 bg-leafGreen/10 text-leafGreen border border-leafGreen/30 rounded-full">
+                  {lunch.actualCheckIns} / {lunch.confirmedHeadcount} Checked In
+                </span>
+              </div>
+
+              <div className="w-full h-60 bg-black rounded-xl border-4 border-mutedStone/40 flex flex-col items-center justify-center relative">
+                <div className="w-40 h-40 border-2 border-turmericGold relative flex items-center justify-center animate-pulse">
+                  <span className="text-[11px] text-white/70 font-mono">Camera Viewfinder Active</span>
+                </div>
+              </div>
+
+              {/* Hardware Bypass Verification Buttons */}
+              <div className="flex flex-wrap gap-2 pt-2">
+                <button
+                  onClick={() => setScanResult(scanGatePass('VALID_PASS_SVH'))}
+                  className="px-3 py-2 bg-leafGreen text-white text-xs font-medium rounded-lg"
+                >
+                  Scan Valid Pass (Success Chime)
+                </button>
+                <button
+                  onClick={() => setScanResult(scanGatePass('WRONG_MESS_TANDON_PASS'))}
+                  className="px-3 py-2 bg-warningAmber text-white text-xs font-medium rounded-lg"
+                >
+                  Scan Wrong-Mess Pass (Rejection Alert)
+                </button>
+                <button
+                  onClick={() => setScanResult(scanGatePass('ALREADY_USED_PASS'))}
+                  className="px-3 py-2 bg-errorRed text-white text-xs font-medium rounded-lg"
+                >
+                  Scan Already-Used Pass (Double-Dip Warning)
+                </button>
+              </div>
+            </div>
+
+            {/* Right: Instant Scan Verification Outcome */}
+            <div className="bg-riceWhite dark:bg-surface border border-softBorder dark:border-borderDark rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+              <div>
+                <h4 className="font-bold text-xs uppercase tracking-wider text-mutedStone mb-3">Redemption Telemetry</h4>
+                {scanResult ? (
+                  <div className={`p-5 rounded-xl border text-center ${
+                    scanResult.code === 'SUCCESS' ? 'bg-leafGreen/10 border-leafGreen text-leafGreen' :
+                    scanResult.code === 'WRONG_MESS' ? 'bg-warningAmber/15 border-warningAmber text-warningAmber' :
+                    'bg-errorRed/10 border-errorRed text-errorRed'
+                  }`}>
+                    <div className="text-3xl mb-1">{scanResult.code === 'SUCCESS' ? '✓' : '⚠️'}</div>
+                    <div className="font-bold font-mono">{scanResult.code}</div>
+                    <p className="text-xs mt-1">{scanResult.message}</p>
+                    {scanResult.resident && <div className="mt-2 text-[11px] font-mono border-t pt-1">{scanResult.resident}</div>}
+                  </div>
+                ) : (
+                  <div className="p-8 text-center text-mutedStone text-xs border-2 border-dashed border-softBorder rounded-xl">
+                    Ready for check-in. Tap any scan button to execute server validation.
+                  </div>
+                )}
+              </div>
+              <div className="text-[11px] text-mutedStone border-t pt-3">
+                Atomic single-use conditional updates enforced.
+              </div>
+            </div>
+          </div>
+
+          {/* Thali Planner: Explainable Math (Why This Number?) */}
+          <div className="bg-riceWhite dark:bg-surface border border-softBorder rounded-2xl p-6 shadow-sm space-y-3">
+            <h3 className="font-bold text-base text-deepMaroon">Thali Planner: Explainable Cook Targets (Monday Lunch)</h3>
+            <p className="text-xs text-mutedStone">Confirmed Headcount: <strong>{lunch.confirmedHeadcount} students</strong> (+6.5% buffer)</p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+              <div className="p-3 bg-warmIvory rounded-xl border">
+                <div className="font-bold">Dehradun Basmati Rice</div>
+                <div className="text-xl font-bold font-mono text-deepMaroon mt-1">129.4 kg</div>
+                <div className="text-[10px] text-mutedStone">Formula: 810 × 150g + 6.5% buffer</div>
+              </div>
+              <div className="p-3 bg-warmIvory rounded-xl border">
+                <div className="font-bold">Dal Makhani (Slow Simmered)</div>
+                <div className="text-xl font-bold font-mono text-deepMaroon mt-1">155.3 Litres</div>
+                <div className="text-[10px] text-mutedStone">Formula: 810 × 180ml + 6.5% buffer</div>
+              </div>
+              <div className="p-3 bg-warmIvory rounded-xl border">
+                <div className="font-bold">Fresh Tawa Roti</div>
+                <div className="text-xl font-bold font-mono text-deepMaroon mt-1">2,588 Pieces</div>
+                <div className="text-[10px] text-mutedStone">Formula: 810 × 3 pcs + 6.5% buffer</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Pre-Service Food Quality Check */}
+          <div className="bg-riceWhite dark:bg-surface border border-softBorder rounded-2xl p-6 shadow-sm space-y-4">
+            <h3 className="font-bold text-base text-deepMaroon">Mandatory Quality Gate (Cooked Food Inspection)</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+              <div className="space-y-3">
+                <div>
+                  <label className="font-bold block mb-1">Measured Food Temperature: {qcTemp}°C</label>
+                  <input type="range" min="40" max="90" value={qcTemp} onChange={(e) => setQcTemp(Number(e.target.value))} className="w-full" />
+                  <span className="text-[10px] text-mutedStone">Hot-holding threshold: ≥ 65°C</span>
+                </div>
+                <label className="flex items-center gap-2">
+                  <input type="checkbox" checked={qcHygiene} onChange={(e) => setQcHygiene(e.target.checked)} />
+                  <span>Hygiene & Counter Sanitization Approved</span>
+                </label>
+                <div className="flex gap-2 pt-2">
+                  <button onClick={() => submitQC(qcTemp, qcHygiene, 'PASS')} className="px-4 py-2 bg-leafGreen text-white font-bold rounded-lg">Log PASS</button>
+                  <button onClick={() => submitQC(qcTemp, qcHygiene, 'FAIL')} className="px-4 py-2 bg-errorRed text-white font-bold rounded-lg">Log FAIL (Alerts Warden)</button>
+                </div>
+              </div>
+
+              {/* Quality Log History */}
+              <div className="space-y-2">
+                <h4 className="font-bold text-mutedStone uppercase text-[10px]">Recent Inspection Log</h4>
+                {qualityChecks.map((qc) => (
+                  <div key={qc.id} className="p-3 bg-warmIvory rounded-lg border flex justify-between items-center text-xs">
+                    <div>
+                      <span className="font-bold block">{qc.stage} Check • {qc.temp}°C</span>
+                      <span className="text-mutedStone text-[10px]">Inspector: {qc.inspector} • {qc.time}</span>
+                    </div>
+                    <span className={`px-2 py-0.5 rounded font-bold text-[10px] ${qc.status === 'PASS' ? 'bg-leafGreen text-white' : 'bg-errorRed text-white'}`}>
+                      {qc.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+        </div>
+      );
+    };
+
+    // --- 8. WARDEN PORTAL ---
+    const WardenPortal = () => {
+      const { currentUser, wardenRequests, updateWardenRequest, publicActions } = useMess();
+
+      return (
+        <div className="space-y-6">
+          <div className="bg-riceWhite dark:bg-surface border border-softBorder rounded-2xl p-6 shadow-sm">
+            <span className="text-[10px] font-bold text-terracotta uppercase tracking-wider">Hostel Warden Portal</span>
+            <h2 className="text-xl font-bold font-serif text-deepMaroon dark:text-primaryAccent mt-1">
+              {currentUser.name} • {currentUser.hostelName} Scope
+            </h2>
+            <p className="text-xs text-mutedStone">Approve medical diet requests, extended leave opt-outs, and review refectory quality.</p>
+          </div>
+
+          {/* Pending Resident Requests */}
+          <div className="bg-riceWhite dark:bg-surface border border-softBorder rounded-2xl p-6 shadow-sm space-y-3">
+            <h3 className="font-bold text-base text-deepMaroon">Pending Resident Requests ({wardenRequests.length})</h3>
+            <div className="space-y-2">
+              {wardenRequests.map((r) => (
+                <div key={r.id} className="p-4 bg-warmIvory rounded-xl border flex justify-between items-center text-xs">
+                  <div>
+                    <span className="font-bold block">{r.resident} • {r.room}</span>
+                    <span className="text-terracotta font-medium">{r.type}</span>
+                  </div>
+                  {r.status === 'PENDING' ? (
+                    <div className="flex gap-2">
+                      <button onClick={() => updateWardenRequest(r.id, 'APPROVED')} className="px-3 py-1.5 bg-leafGreen text-white font-bold rounded">Approve</button>
+                      <button onClick={() => updateWardenRequest(r.id, 'REJECTED')} className="px-3 py-1.5 bg-errorRed text-white font-bold rounded">Reject</button>
+                    </div>
+                  ) : (
+                    <span className={`px-2 py-0.5 rounded font-bold ${r.status === 'APPROVED' ? 'bg-leafGreen/15 text-leafGreen' : 'bg-red-100 text-errorRed'}`}>{r.status}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* You Said, We Did Public Accountability Board */}
+          <div className="bg-riceWhite dark:bg-surface border border-softBorder rounded-2xl p-6 shadow-sm space-y-3">
+            <h3 className="font-bold text-base text-deepMaroon">"You Said, We Did" Closed Action Board</h3>
+            <div className="space-y-2">
+              {publicActions.map((act) => (
+                <div key={act.id} className="p-4 bg-warmIvory rounded-xl border text-xs space-y-1">
+                  <div className="flex justify-between font-bold">
+                    <span>{act.issueTitle}</span>
+                    <span className="text-leafGreen">{act.status}</span>
+                  </div>
+                  <p className="text-mutedStone">Action: {act.actionTaken}</p>
+                  <span className="text-[10px] text-mutedStone font-mono">Resolved based on {act.residentVotes} verified student ratings</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // --- 9. ADMIN SECURITY & TELEMETRY MONITOR ---
+    const AdminPortal = () => {
+      const { activeSessions, setActiveSessions, schedule } = useMess();
+
+      const revokeSession = (id) => {
+        setActiveSessions(prev => prev.filter(s => s.id !== id));
+        sound.playWarning();
+      };
+
+      return (
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-xl font-bold font-serif text-deepMaroon dark:text-primaryAccent">
+                Campus Operations & Live Session Monitor
+              </h2>
+              <p className="text-xs text-mutedStone">Real-time session heartbeat and remote revocation engine.</p>
+            </div>
+            <span className="px-3 py-1 bg-leafGreen/15 text-leafGreen text-xs font-mono font-bold rounded-full">
+              ● {activeSessions.length} Active Sessions
+            </span>
+          </div>
+
+          <div className="bg-riceWhite dark:bg-surface border border-softBorder rounded-xl overflow-hidden shadow-sm">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-warmIvory dark:bg-surfaceElevated text-mutedStone uppercase text-[10px]">
+                <tr>
+                  <th className="p-3">Device & Location</th>
+                  <th className="p-3">User</th>
+                  <th className="p-3">Role</th>
+                  <th className="p-3">Heartbeat</th>
+                  <th className="p-3 text-right">Revoke Access</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-softBorder">
+                {activeSessions.map((s) => (
+                  <tr key={s.id} className="hover:bg-warmIvory/30">
+                    <td className="p-3 font-semibold">{s.device}</td>
+                    <td className="p-3">{s.user}</td>
+                    <td className="p-3 font-mono text-terracotta">{s.role}</td>
+                    <td className="p-3 text-mutedStone">{s.lastActive}</td>
+                    <td className="p-3 text-right">
+                      <button
+                        onClick={() => revokeSession(s.id)}
+                        className="px-2.5 py-1 text-[11px] bg-red-100 text-errorRed hover:bg-errorRed hover:text-white rounded"
+                      >
+                        Revoke
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    };
+
+    // --- 10. MAIN APP SHELL & ROUTER ---
+    const DashboardShell = () => {
+      const { currentUser, signOut, currentTime, theme, setTheme, lang, setLang } = useMess();
+      const [currentRoleTab, setCurrentRoleTab] = useState(currentUser.role);
+
+      return (
+        <div className="min-h-screen bg-warmIvory dark:bg-appDark text-charcoal dark:text-textPrimary flex flex-col font-sans">
+          
+          {/* Top Sticky Header */}
+          <header className="sticky top-0 z-40 bg-riceWhite/95 dark:bg-surface/95 backdrop-blur border-b border-softBorder dark:border-borderDark px-4 sm:px-6 py-3 flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-deepMaroon flex items-center justify-center text-turmericGold font-serif font-black text-lg">M</div>
+              <div>
+                <span className="font-serif font-bold text-base text-deepMaroon dark:text-primaryAccent block leading-tight">MessWise • MNNIT Allahabad</span>
+                <span className="text-[10px] text-mutedStone tracking-tight block">Webster 2026 • Terror Code 404</span>
+              </div>
+
+              {/* Role Switcher Tabs */}
+              <div className="hidden lg:flex items-center gap-1.5 ml-6 text-xs">
+                <button
+                  onClick={() => setCurrentRoleTab('STUDENT')}
+                  className={`px-2.5 py-1 rounded-md font-medium ${currentRoleTab === 'STUDENT' ? 'bg-deepMaroon text-white' : 'text-mutedStone'}`}
+                >
+                  Student Portal
+                </button>
+                <button
+                  onClick={() => setCurrentRoleTab('MESS_STAFF')}
+                  className={`px-2.5 py-1 rounded-md font-medium ${currentRoleTab === 'MESS_STAFF' ? 'bg-deepMaroon text-white' : 'text-mutedStone'}`}
+                >
+                  Gate Scanner (Staff)
+                </button>
+                <button
+                  onClick={() => setCurrentRoleTab('HOSTEL_WARDEN')}
+                  className={`px-2.5 py-1 rounded-md font-medium ${currentRoleTab === 'HOSTEL_WARDEN' ? 'bg-deepMaroon text-white' : 'text-mutedStone'}`}
+                >
+                  Warden Approvals
+                </button>
+                <button
+                  onClick={() => setCurrentRoleTab('ADMIN')}
+                  className={`px-2.5 py-1 rounded-md font-medium ${currentRoleTab === 'ADMIN' ? 'bg-deepMaroon text-white' : 'text-mutedStone'}`}
+                >
+                  Admin Telemetry
+                </button>
+              </div>
+            </div>
+
+            {/* Real-Time Clock & User Info */}
+            <div className="flex items-center gap-3">
+              <div className="hidden sm:block text-right font-mono text-xs text-mutedStone">
+                <div className="font-bold text-deepMaroon dark:text-gold">
+                  {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })} IST
+                </div>
+                <div className="text-[10px]">Mon, Oct 26, 2026</div>
+              </div>
+
+              <button onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} className="p-1.5 text-xs rounded-lg bg-warmIvory border border-softBorder">
+                {theme === 'light' ? '🌙' : '☀️'}
+              </button>
+
+              <div className="flex items-center gap-2 pl-2 border-l border-softBorder text-xs">
+                <div className="text-right hidden sm:block">
+                  <span className="font-bold leading-none block">{currentUser.name}</span>
+                  <span className="text-[10px] text-mutedStone font-mono">{currentUser.role}</span>
+                </div>
+                <button onClick={signOut} className="px-2.5 py-1 text-xs text-errorRed hover:bg-red-50 border border-red-200 rounded font-semibold cursor-pointer">
+                  Sign Out
+                </button>
+              </div>
+            </div>
+          </header>
+
+          {/* Main Content Area */}
+          <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 md:p-8">
+            {currentRoleTab === 'STUDENT' && <StudentPortal />}
+            {currentRoleTab === 'MESS_STAFF' && <StaffPortal />}
+            {currentRoleTab === 'HOSTEL_WARDEN' && <WardenPortal />}
+            {currentRoleTab === 'ADMIN' && <AdminPortal />}
+          </main>
+
+          {/* Footer */}
+          <footer className="border-t border-softBorder py-4 text-center text-[11px] text-mutedStone space-y-1">
+            <div>MessWise: The Kamar-Taj Refectory • Webster 2026 Project (Team ID: 254)</div>
+            <div>Developed by: Vansshiekaa Singh (20259028), Ankur (20259001), Saksham Kumar Singh (20259023)</div>
+          </footer>
+        </div>
+      );
+    };
+
+    // --- 11. ROOT ROUTER ---
+    const App = () => {
+      const { currentUser, needsOnboarding, loadingAuth } = useMess();
+
+      if (loadingAuth) {
+        return (
+          <div className="min-h-screen bg-warmIvory flex items-center justify-center">
+            <div className="text-center space-y-2">
+              <div className="w-8 h-8 border-4 border-deepMaroon border-t-transparent rounded-full animate-spin mx-auto"></div>
+              <p className="text-xs font-semibold text-deepMaroon">Initializing MessWise Telemetry...</p>
+            </div>
+          </div>
+        );
+      }
+
+      if (!currentUser) return <LoginPage />;
+      if (needsOnboarding) return <RoleOnboardingModal />;
+      return <DashboardShell />;
+    };
+
+    ReactDOM.createRoot(document.getElementById('root')).render(
+      <MessProvider>
+        <App />
+      </MessProvider>
+    );
+  </script>
+</body>
+</html>
